@@ -1,0 +1,211 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Gerenciador de Bilhetes</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            margin: 0;
+            padding: 0;
+            background-color: #f4f4f9;
+            color: #333;
+        }
+
+        header {
+            background-color: #6c63ff;
+            color: white;
+            padding: 1rem;
+            text-align: center;
+        }
+
+        main {
+            padding: 1rem;
+        }
+
+        .container {
+            max-width: 800px;
+            margin: auto;
+            background: white;
+            padding: 2rem;
+            border-radius: 8px;
+            box-shadow: 0 0 10px rgba(0, 0, 0, 0.1);
+        }
+
+        h1 {
+            text-align: center;
+            margin-bottom: 1.5rem;
+        }
+
+        .form-group {
+            display: flex;
+            gap: 10px;
+            margin-bottom: 1rem;
+        }
+
+        .form-group input, .form-group select {
+            flex: 1;
+            padding: 0.5rem;
+            font-size: 1rem;
+            border: 1px solid #ccc;
+            border-radius: 4px;
+        }
+
+        .form-group button {
+            padding: 0.5rem 1rem;
+            font-size: 1rem;
+            color: white;
+            background-color: #6c63ff;
+            border: none;
+            border-radius: 4px;
+            cursor: pointer;
+        }
+
+        .form-group button:hover {
+            background-color: #5751d9;
+        }
+
+        .ticket-list {
+            max-height: 400px;
+            overflow-y: auto;
+            border: 1px solid #ccc;
+            border-radius: 4px;
+            padding: 0.5rem;
+        }
+
+        .ticket {
+            display: flex;
+            justify-content: space-between;
+            padding: 0.5rem;
+            border-bottom: 1px solid #f4f4f9;
+        }
+
+        .ticket:nth-child(odd) {
+            background-color: #f9f9fc;
+        }
+
+        .ticket .number {
+            font-weight: bold;
+        }
+
+        .copy-message, .cancel-message {
+            cursor: pointer;
+            color: #6c63ff;
+        }
+
+        .copy-message:hover, .cancel-message:hover {
+            text-decoration: underline;
+        }
+    </style>
+</head>
+<body>
+    <header>
+        <h1>Gerenciador de Bilhetes</h1>
+    </header>
+    <main>
+        <div class="container">
+            <div class="form-group">
+                <input type="text" id="competitor-name" placeholder="Nome do Concorrente" />
+                <input type="number" id="ticket-quantity" placeholder="Quantidade de Bilhetes" min="1" max="3000" value="1" />
+                <button onclick="addCompetitor()">Adicionar</button>
+            </div>
+            <div class="ticket-list" id="ticket-list">
+                <!-- Tickets will be listed here -->
+            </div>
+        </div>
+    </main>
+    <script>
+        let currentTicket = 1;
+        let ticketData = JSON.parse(localStorage.getItem('ticketData')) || [];
+
+        // Function to save ticket data to localStorage
+        function saveTickets() {
+            localStorage.setItem('ticketData', JSON.stringify(ticketData));
+        }
+
+        // Function to render tickets from the ticketData array
+        function renderTickets() {
+            const ticketList = document.getElementById('ticket-list');
+            ticketList.innerHTML = '';
+
+            for (let i = 1; i <= 3000; i++) {
+                const ticket = document.createElement('div');
+                ticket.className = 'ticket';
+                const ticketInfo = ticketData.find(t => t.number === i);
+
+                ticket.innerHTML = `<span class="number">${String(i).padStart(4, '0')}</span>
+                                    <span class="name">${ticketInfo ? ticketInfo.name : ''}</span>
+                                    <span>
+                                        <span class='copy-message' onclick='copyTicket(${i})'>Copiar</span>
+                                        ${ticketInfo ? `<span class='cancel-message' onclick='cancelTicket(${i})'> | Cancelar</span>` : ''}
+                                    </span>`;
+                ticketList.appendChild(ticket);
+            }
+        }
+
+        // Function to add competitor's name to the next ticket(s) in order
+        function addCompetitor() {
+            const competitorName = document.getElementById('competitor-name').value;
+            const ticketQuantity = parseInt(document.getElementById('ticket-quantity').value);
+
+            if (!competitorName) {
+                alert('Por favor, preencha o nome do concorrente.');
+                return;
+            }
+
+            if (isNaN(ticketQuantity) || ticketQuantity < 1) {
+                alert('Por favor, insira uma quantidade válida de bilhetes.');
+                return;
+            }
+
+            if (currentTicket + ticketQuantity - 1 > 3000) {
+                alert('Não há bilhetes suficientes disponíveis.');
+                return;
+            }
+
+            for (let i = 0; i < ticketQuantity; i++) {
+                ticketData.push({ number: currentTicket, name: competitorName });
+                currentTicket++;
+            }
+
+            saveTickets();
+            renderTickets();
+            alert(`Nome "${competitorName}" adicionado a ${ticketQuantity} bilhete(s).`);
+            document.getElementById('competitor-name').value = '';
+            document.getElementById('ticket-quantity').value = '1';
+        }
+
+        // Function to copy ticket message
+        function copyTicket(ticketNumber) {
+            const ticketMessage = `O nº do seu bilhete para o sorteio é: ${String(ticketNumber).padStart(4, '0')}`;
+            navigator.clipboard.writeText(ticketMessage).then(() => {
+                alert(`Mensagem copiada: ${ticketMessage}`);
+            });
+        }
+
+        // Function to cancel a ticket assignment
+        function cancelTicket(ticketNumber) {
+            const index = ticketData.findIndex(t => t.number === ticketNumber);
+
+            if (index !== -1) {
+                ticketData.splice(index, 1);
+                saveTickets();
+                renderTickets();
+                if (ticketNumber < currentTicket) {
+                    currentTicket = ticketNumber;
+                }
+                alert(`Bilhete ${String(ticketNumber).padStart(4, '0')} cancelado.`);
+            }
+        }
+
+        // Initialize tickets on page load
+        window.onload = () => {
+            if (ticketData.length > 0) {
+                currentTicket = Math.max(...ticketData.map(t => t.number)) + 1;
+            }
+            renderTickets();
+        };
+    </script>
+</body>
+</html>
